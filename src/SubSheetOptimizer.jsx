@@ -150,7 +150,7 @@ function Stat({ label, value, sub, type }) {
   );
 }
 
-function ResultCard({ o, label, orientLabel, isBest, MW }) {
+function ResultCard({ o, label, orientLabel, isBest, MW, onSave }) {
   if (!o) return (
     <div className="sso-empty">
       <span style={{ color: "#a3a3a3", fontSize: 13, textAlign: "center" }}>
@@ -227,6 +227,22 @@ function ResultCard({ o, label, orientLabel, isBest, MW }) {
         </div>
       </div>
 
+      <button
+        onClick={onSave}
+        style={{
+          marginTop: 14, width: "100%", padding: "9px 0",
+          background: "linear-gradient(135deg,#fafafa,#f5f5f5)",
+          border: "1.5px solid #d4d4d4", borderRadius: 8,
+          fontSize: 12, fontWeight: 700, color: "#525252",
+          fontFamily: "inherit", cursor: "pointer", letterSpacing: "0.05em",
+          transition: "border-color 0.15s, color 0.15s",
+        }}
+        onMouseOver={e => { e.currentTarget.style.borderColor = "#dc2626"; e.currentTarget.style.color = "#dc2626"; }}
+        onMouseOut={e => { e.currentTarget.style.borderColor = "#d4d4d4"; e.currentTarget.style.color = "#525252"; }}
+      >
+        + SAVE TO HISTORY
+      </button>
+
     </div>
   );
 }
@@ -245,6 +261,7 @@ export default function SubSheetOptimizer() {
   const [kerf,     setKerf]     = useState("0.3");
   const [alloyIdx, setAlloyIdx] = useState(6); // 5052
   const [customDensity, setCustomDensity] = useState("0.098");
+  const [history, setHistory] = useState([]);
 
   const density = ALLOYS[alloyIdx].density ?? (parseFloat(customDensity) || null);
 
@@ -295,6 +312,26 @@ export default function SubSheetOptimizer() {
   const bestIs = results
     ? (!results.o1 ? 2 : !results.o2 ? 1 : results.o1.remainder >= results.o2.remainder ? 1 : 2)
     : null;
+
+  const saveToHistory = (o, label, orientLabel) => {
+    if (!o || !results) return;
+    setHistory(h => [{
+      id: Date.now(),
+      label,
+      orientLabel,
+      alloy: ALLOYS[alloyIdx].label,
+      masterDims: `${results.MW}" × ${results.ML}"`,
+      subSheet: `${results.MW}" × ${o.subL}"`,
+      layout: `${o.cols}×${o.rows}`,
+      yield: o.yield,
+      spare: o.spare,
+      remainder: o.remainder > 0 ? `${results.MW}" × ${o.remainder}"` : "None",
+      remWeight: o.remWeight,
+      subWeight: o.subWeight,
+      scrapPct: o.masterScrapPct,
+      qty: results.Q,
+    }, ...h]);
+  };
 
   return (
     <>
@@ -387,8 +424,8 @@ export default function SubSheetOptimizer() {
           {/* Results */}
           {results ? (
             <div style={{ display: "flex", gap: 16 }}>
-              <ResultCard o={results.o1} label="Option A" orientLabel={`${results.PW}" × ${results.PH}" (W×H)`}         isBest={bestIs === 1} MW={results.MW} />
-              <ResultCard o={results.o2} label="Option B" orientLabel={`${results.PH}" × ${results.PW}" (H×W flipped)`} isBest={bestIs === 2} MW={results.MW} />
+              <ResultCard o={results.o1} label="Option A" orientLabel={`${results.PW}" × ${results.PH}" (W×H)`}         isBest={bestIs === 1} MW={results.MW} onSave={() => saveToHistory(results.o1, "Option A", `${results.PW}" × ${results.PH}" (W×H)`)} />
+              <ResultCard o={results.o2} label="Option B" orientLabel={`${results.PH}" × ${results.PW}" (H×W flipped)`} isBest={bestIs === 2} MW={results.MW} onSave={() => saveToHistory(results.o2, "Option B", `${results.PH}" × ${results.PW}" (H×W flipped)`)} />
             </div>
           ) : (
             <div style={{ background: "rgba(255,255,255,0.15)", borderRadius: 16, padding: 40, textAlign: "center", color: "#a3a3a3", fontSize: 14 }}>
@@ -399,6 +436,43 @@ export default function SubSheetOptimizer() {
           <div style={{ textAlign: "center", color: "#525252", fontSize: 11, marginTop: 16 }}>
             Master scrap rate is output-based: (Master Area &minus; Sub-Sheet Area) / Sub-Sheet Area &nbsp;&bull;&nbsp; Kerf applied between pieces and on master cross-cut
           </div>
+
+          {/* History */}
+          {history.length > 0 && (
+            <div className="sso-card" style={{ padding: 0, overflow: "hidden", marginTop: 20 }}>
+              <div style={{ background: "linear-gradient(135deg,#171717,#262626)", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <p style={{ fontSize: 15, fontWeight: 700, color: "#fff", margin: 0 }}>Saved Calculations ({history.length})</p>
+                <button
+                  onClick={() => setHistory([])}
+                  style={{ fontSize: 10, color: "#a3a3a3", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}
+                >Clear All</button>
+              </div>
+              <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+                {history.map(rec => (
+                  <div key={rec.id} style={{ background: "linear-gradient(135deg,#fafafa,#fff)", borderRadius: 12, padding: "12px 16px", border: "1px solid #e5e5e5", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 5, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4, background: "#fee2e2", color: "#dc2626" }}>{rec.label}</span>
+                        <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4, background: "#f5f5f5", color: "#525252", border: "1px solid #e5e5e5" }}>{rec.alloy}</span>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: "#171717", margin: 0 }}>{rec.subSheet}</p>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, auto)", gap: "4px 16px", fontSize: 11, color: "#737373" }}>
+                        <span>Master: {rec.masterDims}</span>
+                        <span>Layout: {rec.layout}</span>
+                        <span>Yield: {rec.yield} pcs (+{rec.spare} spare)</span>
+                        <span>Drop: {rec.remainder}{rec.remWeight ? ` (${rec.remWeight.toLocaleString()} lbs)` : ""}</span>
+                        <span style={{ color: "#dc2626", fontWeight: 700 }}>Scrap: {rec.scrapPct}%</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setHistory(h => h.filter(r => r.id !== rec.id))}
+                      style={{ fontSize: 16, color: "#a3a3a3", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", flexShrink: 0, lineHeight: 1 }}
+                    >✕</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Footer */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, padding: "4px 2px", fontSize: 11, color: "#525252" }}>
