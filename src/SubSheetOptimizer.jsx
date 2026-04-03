@@ -1,12 +1,22 @@
 import { useState, useMemo } from "react";
 
 const ALLOYS = [
-  { label: "7050",  density: 0.102  },
-  { label: "7075",  density: 0.101  },
-  { label: "6061",  density: 0.0975 },
+  { label: "1100",  density: 0.0975 },
+  { label: "2014",  density: 0.101  },
+  { label: "2024",  density: 0.100  },
+  { label: "2219",  density: 0.103  },
+  { label: "3003",  density: 0.0984 },
+  { label: "5005",  density: 0.0974 },
   { label: "5052",  density: 0.097  },
   { label: "5083",  density: 0.096  },
-  { label: "2024",  density: 0.100  },
+  { label: "5086",  density: 0.0964 },
+  { label: "6013",  density: 0.0975 },
+  { label: "6061",  density: 0.0975 },
+  { label: "6082",  density: 0.0975 },
+  { label: "7050",  density: 0.102  },
+  { label: "7068",  density: 0.1024 },
+  { label: "7075",  density: 0.101  },
+  { label: "7085",  density: 0.1024 },
   { label: "Other", density: null   },
 ];
 
@@ -107,9 +117,8 @@ function calcOrientation(MW, ML, Q, K, across, along) {
   const yield_     = cols * rows;
   const masterArea = round(MW * ML, 2);
   const subArea    = round(MW * subL, 2);
-  // (Master − Sub) / Master — what % of the master did NOT ship as the sub-sheet
-  // This is what produces 87.13% for Strohwig Row 9
-  const masterScrapPct = round(((masterArea - subArea) / masterArea) * 100, 2);
+  // Output-based scrap rate (CML standard): (Input − Output) / Output
+  const masterScrapPct = round(((masterArea - subArea) / subArea) * 100, 2);
   return {
     cols, rows, subL, subArea, masterArea,
     yield: yield_, spare: yield_ - Q,
@@ -208,13 +217,13 @@ function ResultCard({ o, label, orientLabel, isBest, MW }) {
       <hr className="sso-divider" />
 
       {/* Master scrap rate — THE number */}
-      <div className="sso-stat-label" style={{ marginBottom: 6 }}>Master Scrap Rate</div>
+      <div className="sso-stat-label" style={{ marginBottom: 6 }}>Master Scrap Rate (Output-Based)</div>
       <div className="sso-stat-red">
         <div style={{ fontSize: 28, fontWeight: 800, color: "#dc2626", lineHeight: 1 }}>
           {o.masterScrapPct}%
         </div>
         <div style={{ fontSize: 11, color: "#737373", marginTop: 4 }}>
-          ({o.masterArea.toLocaleString()} − {o.subArea.toLocaleString()}) / {o.masterArea.toLocaleString()} sq in
+          ({o.masterArea.toLocaleString()} − {o.subArea.toLocaleString()}) / {o.subArea.toLocaleString()} sq in
         </div>
       </div>
 
@@ -234,7 +243,7 @@ export default function SubSheetOptimizer() {
   const [qtyLbs,    setQtyLbs]    = useState("");
 
   const [kerf,     setKerf]     = useState("0.3");
-  const [alloyIdx, setAlloyIdx] = useState(0);
+  const [alloyIdx, setAlloyIdx] = useState(6); // 5052
   const [customDensity, setCustomDensity] = useState("0.098");
 
   const density = ALLOYS[alloyIdx].density ?? (parseFloat(customDensity) || null);
@@ -388,7 +397,13 @@ export default function SubSheetOptimizer() {
           )}
 
           <div style={{ textAlign: "center", color: "#525252", fontSize: 11, marginTop: 16 }}>
-            Master scrap rate: (Master Area &minus; Sub-Sheet Area) / Master Area &nbsp;&bull;&nbsp; Kerf applied between pieces and on master cross-cut
+            Master scrap rate is output-based: (Master Area &minus; Sub-Sheet Area) / Sub-Sheet Area &nbsp;&bull;&nbsp; Kerf applied between pieces and on master cross-cut
+          </div>
+
+          {/* Footer */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, padding: "4px 2px", fontSize: 11, color: "#525252" }}>
+            <span>Sub-Sheet Cut Optimizer &mdash; Champagne Metals</span>
+            <span style={{ fontStyle: "italic" }}>Erin Morgan &mdash; ext. 289</span>
           </div>
 
         </div>
